@@ -78,6 +78,36 @@ class ObdBridgeService : Service() {
 
         override fun isConnectedToECU(): Boolean =
             guarded("isConnectedToECU", { false }) { engine != null }
+
+        // Остальные методы ITorqueService.Default отдают null. Для массивов и строковых полей это
+        // опасно: внешний клиент (Torque, плагины, чужие дашборды) вправе ожидать от службы
+        // массивы и строки, как от настоящего Torque, и упадёт на null. Возвращаем пустые
+        // значения того же размера, что и запрос, — поведение прежнего моста без рефлексии.
+        override fun getListOfActivePids(): LongArray = LongArray(0)
+        override fun getListOfECUSupportedPids(): LongArray = LongArray(0)
+        override fun getListOfAllPids(): LongArray = LongArray(0)
+        override fun listActivePIDs(): Array<String> = emptyArray()
+        override fun listECUSupportedPIDs(): Array<String> = emptyArray()
+        override fun listAllPIDsIncludingDetectedPIDs(): Array<String> = emptyArray()
+        override fun getVehicleProfileInformation(): Array<String> = emptyArray()
+        override fun getCurrentThemeUri(callingPackageName: String?): Array<String> = emptyArray()
+        override fun recombineResponses(rawResponsesFromECU: Array<String>?): Array<String> =
+            rawResponsesFromECU ?: emptyArray()
+        override fun captureFrames(time: Int): Array<String> = emptyArray()
+        override fun getPIDRawResponse(OBDCommand: String?): Array<String> = emptyArray()
+        override fun sendCommandGetResponse(header: String?, command: String?): Array<String> = emptyArray()
+        override fun getPIDValues(pidsToRetrieve: Array<String>?): FloatArray =
+            FloatArray(pidsToRetrieve?.size ?: 0)
+        override fun getValueForPids(pids: LongArray?): FloatArray = FloatArray(pids?.size ?: 0)
+        override fun getPIDUpdateTime(pidIDs: Array<String>?): LongArray = LongArray(pidIDs?.size ?: 0)
+        override fun getDescriptionForPid(pid: Long): String = ""
+        override fun getShortNameForPid(pid: Long): String = ""
+        override fun getUnitForPid(pid: Long): String = ""
+        override fun translate(originalText: String?): String = originalText ?: ""
+        override fun getProtocolName(): String = ""
+        override fun getThemeType(): String = ""
+        override fun getSettingString(setting: String?, def: String?): String = def ?: ""
+        override fun retrieveProfileData(key: String?): String = ""
     }
 
     /** Вызов моста: сбой пишется в журнал, вызывающий получает безопасное значение вместо исключения. */

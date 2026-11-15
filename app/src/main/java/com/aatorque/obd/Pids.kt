@@ -39,23 +39,21 @@ data class PidDef(
 object Live { @Volatile var baro = 101.0 }
 
 private fun IntArray.u(i: Int): Int = if (i < size) this[i] else 0
-private fun s16(h: Int, l: Int): Int { val v = h * 256 + l; return if (v > 32767) v - 65536 else v }
-
 object MazdaPids {
-    private val soot: Decoder = { (it.u(0) * 256 + it.u(1)) * 100 / 65536.0 }
+    private val soot: Decoder = { MazdaDecode.soot(it) }
 
     val all: List<PidDef> = listOf(
         // --- стандартные (режим 01, блок двигателя 7E0) ---
         PidDef("05", R.string.pid_05_name, R.string.pid_05_short, R.string.pid_05_unit, -40.0, 130.0,
-            request = "0105", decode = { it.u(0) - 40.0 }),
+            request = "0105", decode = { MazdaDecode.at(it.u(0)) }),
         PidDef("0c", R.string.pid_0c_name, R.string.pid_0c_short, R.string.pid_0c_unit, 0.0, 5500.0,
-            request = "010C", decode = { (it.u(0) * 256 + it.u(1)) / 4.0 }),
+            request = "010C", decode = { MazdaDecode.rpm(it) }),
         PidDef("0d", R.string.pid_0d_name, R.string.pid_0d_short, R.string.pid_0d_unit, 0.0, 240.0,
             request = "010D", decode = { it.u(0).toDouble() }),
         PidDef("04", R.string.pid_04_name, R.string.pid_04_short, R.string.pid_04_unit, 0.0, 100.0,
-            request = "0104", decode = { it.u(0) * 100 / 255.0 }),
+            request = "0104", decode = { MazdaDecode.percent(it.u(0)) }),
         PidDef("23", R.string.pid_23_name, R.string.pid_23_short, R.string.pid_23_unit, 0.0, 200.0,
-            request = "0123", decode = { (it.u(0) * 256 + it.u(1)) * 10 / 1000.0 }),
+            request = "0123", decode = { MazdaDecode.railPressure(it) }),
         PidDef("0b", R.string.pid_0b_name, R.string.pid_0b_short, R.string.pid_0b_unit, 0.0, 255.0,
             request = "010B", decode = { it.u(0).toDouble() }),
         PidDef("33", R.string.pid_33_name, R.string.pid_33_short, R.string.pid_33_unit, 0.0, 120.0,
@@ -63,28 +61,28 @@ object MazdaPids {
             decode = { Live.baro = it.u(0).toDouble(); it.u(0).toDouble() }),
         PidDef("70", R.string.pid_70_name, R.string.pid_70_short, R.string.pid_70_unit, -1.0, 2.0,
             request = "0170",
-            decode = { b -> if ((b.u(0) and 2) != 0) ((b.u(3) * 256 + b.u(4)) * 0.03125 - Live.baro) / 100.0 else null }),
+            decode = { b -> MazdaDecode.boost(b, Live.baro) }),
         PidDef("10", R.string.pid_10_name, R.string.pid_10_short, R.string.pid_10_unit, 0.0, 300.0,
-            request = "0110", decode = { (it.u(0) * 256 + it.u(1)) / 100.0 }),
+            request = "0110", decode = { MazdaDecode.maf(it) }),
         PidDef("0f", R.string.pid_0f_name, R.string.pid_0f_short, R.string.pid_0f_unit, -40.0, 100.0,
-            request = "010F", decode = { it.u(0) - 40.0 }),
+            request = "010F", decode = { MazdaDecode.at(it.u(0)) }),
         PidDef("5c", R.string.pid_5c_name, R.string.pid_5c_short, R.string.pid_5c_unit, -40.0, 150.0,
-            request = "015C", decode = { it.u(0) - 40.0 }),
+            request = "015C", decode = { MazdaDecode.at(it.u(0)) }),
         PidDef("2f", R.string.pid_2f_name, R.string.pid_2f_short, R.string.pid_2f_unit, 0.0, 100.0,
-            request = "012F", slow = true, decode = { it.u(0) * 100 / 255.0 }),
+            request = "012F", slow = true, decode = { MazdaDecode.percent(it.u(0)) }),
         PidDef("42", R.string.pid_42_name, R.string.pid_42_short, R.string.pid_42_unit, 8.0, 16.0,
-            request = "0142", slow = true, decode = { (it.u(0) * 256 + it.u(1)) / 1000.0 }),
+            request = "0142", slow = true, decode = { MazdaDecode.voltage(it) }),
         PidDef("7a", R.string.pid_7a_name, R.string.pid_7a_short, R.string.pid_7a_unit, 0.0, 50.0,
             request = "017A",
-            decode = { b -> if ((b.u(0) and 1) != 0) s16(b.u(1), b.u(2)) / 100.0 else null }),
+            decode = { b -> MazdaDecode.dpfPressure(b) }),
 
         // --- Mazda, режим 22 (подтверждено на автомобиле) ---
         PidDef("ff9001", R.string.pid_ff9001_name, R.string.pid_ff9001_short, 0, 0.0, 10000.0,
             request = "220432", slow = true,
-            decode = { (it.u(0) * 256 + it.u(1)).toDouble() }),
+            decode = { MazdaDecode.regenCounter(it) }),
         PidDef("ff9002", R.string.pid_ff9002_name, R.string.pid_ff9002_short, R.string.pid_ff9002_unit, 0.0, 1500.0,
             request = "220434", slow = true,
-            decode = { ((it.u(1) shl 16) + (it.u(2) shl 8) + it.u(3)) * 100 / 65536.0 }),
+            decode = { MazdaDecode.kmSinceRegen(it) }),
         PidDef("ff9003", R.string.pid_ff9003_name, R.string.pid_ff9003_short, R.string.pid_ff9003_unit, 0.0, 10.0,
             request = "22042C", slow = true, decode = soot),
         PidDef("ff9004", R.string.pid_ff9004_name, R.string.pid_ff9004_short, R.string.pid_ff9004_unit, 0.0, 10.0,
@@ -92,10 +90,10 @@ object MazdaPids {
         // статус прожига сажевого: 0 нет, 1 обычный, 2 принудительный (по данным CarScanner для SkyActiv-D)
         PidDef("ff9006", R.string.pid_ff9006_name, R.string.pid_ff9006_short, 0, 0.0, 2.0,
             request = "220380", slow = true,
-            decode = { it.u(0).toDouble() }),
+            decode = { MazdaDecode.regenStatus(it) }),
         PidDef("ff9005", R.string.pid_ff9005_name, R.string.pid_ff9005_short, R.string.pid_ff9005_unit, -40.0, 150.0,
             header = "7E1", request = "221E1C", slow = true,
-            decode = { s16(it.u(0), it.u(1)) / 16.0 }),
+            decode = { MazdaDecode.transTemp(it) }),
 
         // --- расчётные ---
         // Процент считается от порога dpf_full_gl (настройка, г/л). Пока порог не задан, значение пустое.

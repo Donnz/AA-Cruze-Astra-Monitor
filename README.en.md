@@ -128,7 +128,7 @@ Found a bug or have a suggestion? Use "⋮ → Report a problem" in the app or c
 - Reading and clearing trouble codes (DTC) is not supported.
 - The parameters were checked on a 2020 Mazda 3 (S8DPTS 1.8L engine); they should work across the SkyActiv-D range, and the main PIDs should work on the vast majority of cars.
 - The temperature before the particulate filter (`01 7C`) is not read: the 1.8 engine unit refuses the request (`7F 01 12`) and does not have this parameter (the 1.5 does); the row was removed from the parameters in 0.7.5. Exhaust gas temperatures (`01 78`, three sensors), however, are reported by the unit: they are written to the diagnostic log but not shown on the gauges.
-- Some observations (soot going down, exhaust temperatures, the `01 8B` burn-off state byte) were made on a car with a modified firmware (EGR disabled) and may differ on a stock one.
+- Some observations (soot going down, exhaust temperatures, the `01 8B` burn-off state byte) were made on a car with a modified firmware and may differ on a stock one.
 - The difference between values 1 and 2 of the regeneration status (`22 0380`) is not confirmed on a car: a non-zero status accompanied a regeneration that started by itself at about 6.5 g/L of soot (one observation). On the "OBD connection" screen check the "Regeneration status (0/1/2)" line, it should show 0 outside a regeneration.
 - The default soot threshold of 6.5 g/L is an average; the real threshold for the 1.8 is not determined yet. The unit may also start a regeneration by mileage regardless of soot; such regenerations lower the observed threshold.
 - The "Now playing" line has not been tested with every player; after a pause the last track stays until the player is closed or the track changes.

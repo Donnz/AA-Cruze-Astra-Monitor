@@ -86,6 +86,12 @@
     <string name="status_connecting_to_ecu">Соединение с ECU</string>
     <string name="export_dashboards">Экспорт панелей приборов</string>
     <string name="import_dashboards">Импорт панелей приборов</string>
+    <string name="export_regen_log">Экспорт журнала прожигов</string>
+    <string name="import_regen_log">Импорт журнала прожигов</string>
+    <string name="regen_exported">Журнал прожигов экспортирован</string>
+    <string name="regen_imported">Импортировано записей: %1$d</string>
+    <string name="regen_import_empty">В файле нет записей о прожигах</string>
+    <string name="import_failed">Ошибка импорта</string>
     <string name="file_exported_successfully">Файл экспортирован успешно</string>
     <string name="export_failed">Ошибка экспорта</string>
     <string name="file_not_available">Файл экспорта недоступен</string>
@@ -95,7 +101,7 @@
     <string name="show_label_desc_clock">Отображать название над прибором</string>
     <string name="pref_shrink_gauge">Большой центральный прибор</string>
     <string name="pref_shrink_gauge_off">Одинаковый размер приборов</string>
-    <string name="new_version">Дотсупна новая версия</string>
+    <string name="new_version">Доступна новая версия</string>
     <string name="download">Загрузить</string>
     <string name="expressionDocumentation">Просмотр документации</string>
     <string name="copy_logs">Скопировать лог в буфер обмена</string>
