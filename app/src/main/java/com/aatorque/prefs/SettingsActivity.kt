@@ -143,44 +143,8 @@ class SettingsActivity : AppCompatActivity(),
                 true
             }
 
-            R.id.action_export_dashboards -> {
-                // Export the file to a user provided location
-                exportFile()
-                true
-            }
-
-            R.id.action_import_dashboards -> {
-                openFile()
-                true
-            }
-
-            R.id.action_export_regen -> {
-                regenExportLauncher.launch("")
-                true
-            }
-
-            R.id.action_import_regen -> {
-                regenImportLauncher.launch("text/plain")
-                true
-            }
-
             R.id.action_copy_logs -> {
                 logsToClipboard()
-                true
-            }
-
-            R.id.action_obd -> {
-                startActivity(Intent(this, com.aatorque.obd.ObdSettingsActivity::class.java))
-                true
-            }
-
-            R.id.action_exit -> {
-                com.aatorque.obd.AppExit.confirmAndExit(this)
-                true
-            }
-
-            R.id.action_experimental -> {
-                startActivity(Intent(this, com.aatorque.obd.ObdExperimentalActivity::class.java))
                 true
             }
 
@@ -209,11 +173,11 @@ class SettingsActivity : AppCompatActivity(),
         }
     }
 
-    private fun openFile() {
+    fun openFile() {
         importFileLauncher.launch(EXPORT_MIME)
     }
 
-    private fun exportFile() {
+    fun exportFile() {
         exportFileLauncher.launch("")
     }
 
@@ -521,9 +485,35 @@ class SettingsActivity : AppCompatActivity(),
         return true
     }
 
-    private fun logsToClipboard() {
+    fun logsToClipboard() {
         val logs = (application as App).logTree.logToString()
         com.aatorque.obd.ErrorReport.start(this, logs.map { it.toString() })
+    }
+
+    fun exportRegenLog() {
+        regenExportLauncher.launch("")
+    }
+
+    fun importRegenLog() {
+        regenImportLauncher.launch("text/plain")
+    }
+
+    fun forceUpdate() {
+        lifecycleScope.launch(Dispatchers.IO) {
+            if (!checkUpdate(true)) {
+                runOnUiThread {
+                    Toast.makeText(this@SettingsActivity, R.string.update_failed, Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
+    fun exitApp() {
+        com.aatorque.obd.AppExit.confirmAndExit(this)
+    }
+
+    fun openCredits() {
+        launchFragment("credits", CreditsFragment())
     }
 
 

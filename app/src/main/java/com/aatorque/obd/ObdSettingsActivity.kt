@@ -12,6 +12,7 @@ import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
 import android.text.InputType
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.preference.EditTextPreference
 import androidx.preference.ListPreference
@@ -288,7 +289,11 @@ class ObdPrefsFragment : PreferenceFragmentCompat() {
             getString(R.string.obd_pref_dpf_threshold_summary, v)
         }
         dpf.setOnPreferenceChangeListener { _, v ->
-            val f = v.toString().replace(',', '.').toFloatOrNull() ?: 0f
+            val f = v.toString().replace(',', '.').toFloatOrNull()
+            if (f == null || (f != 0f && (f < 0.5f || f > 20f))) {
+                Toast.makeText(ctx, R.string.obd_pref_dpf_threshold_invalid, Toast.LENGTH_SHORT).show()
+                return@setOnPreferenceChangeListener false
+            }
             prefs.edit().putFloat("dpf_full_gl", f).apply()
             true
         }

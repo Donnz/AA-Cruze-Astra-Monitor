@@ -111,12 +111,22 @@ The car reports soot accumulation in g/L, not in percent. For the "DPF, %" param
 ## Experimental features
 
 The "⋮ → Experimental features" menu (and the "OBD connection" screen) collects data about **soot at the moment a regeneration starts**, until the real threshold for your engine is known:
-- **Trigger:** the regeneration status reported by the engine unit (parameter `22 0380`: 0 — none, non-zero — a regeneration is running; values 1 and 2 are not distinguished yet). A regeneration is considered started when the status stays non-zero for 10 seconds and finished when it stays 0 for 10 minutes (under high engine load the unit may pause a regeneration for a while). At the start, the log records the maximum accumulated soot and the distance since the previous regeneration;
+- **Trigger:** the regeneration status reported by the engine unit (parameter `22 0380`: 0 — none, non-zero — a regeneration is running; values 1 and 2 both mean active, their exact difference is not confirmed). A regeneration is considered started when the status stays non-zero for 10 seconds and finished when it stays 0 for 10 minutes (under high engine load the unit may pause a regeneration for a while). At the start, the log records the maximum accumulated soot and the distance since the previous regeneration;
 - **Record state:** "completed" (the regeneration counter grew, or the engine was switched off within 10 minutes after the regeneration ended) or "interrupted" (the engine was switched off during the regeneration, or the counter did not grow within 3 minutes after it ended). The remaining soot does not affect the state; after an interrupted regeneration the maximum soot since the last regeneration is counted anew from the current soot. The engine counts as switched off when the unit does not answer or there is no RPM for 10 seconds in a row. All completed regenerations take part in the average and the threshold. If the status briefly drops and returns (less than 10 minutes), it is the same regeneration and no new record is created. After the soot drops by half, the maximum soot since the last regeneration goes down with it and grows again as soot accumulates;
 - if the app connected in the middle of a regeneration, nothing is recorded (the maximum soot is unknown); if the regeneration status is unavailable, the record is made from the counter growth;
 - the "Apply as manual threshold" button, the "DPF % threshold from observations" mode and the gauge parameters "Soot before the last regeneration (exp.)", "Soot maximum since the last regeneration (exp.)".
 
 Recording works only while the connection service is running (the app is started and the adapter is connected). The data is approximate: the soot accumulation in the unit is computed from the differential pressure across the filter.
+
+## FAQ
+
+**How do I know if a regeneration is running?** — The regeneration status (0/1/2) on the gauge screen should be 0 outside a regeneration. A non-zero value means a regeneration is running. The regeneration counter and exhaust temperature also rise.
+
+**The DPF % counter is wrong. What should I do?** — Enter your own threshold in "OBD connection → Particulate filter → Soot threshold" or use the experimental features for automatic threshold detection.
+
+**The app won't connect to the adapter.** — Check: ignition is on, adapter is paired in Bluetooth, correct connection type is selected. Try disabling "Adapter response acceleration".
+
+**Android Auto doesn't work.** — Enable developer mode in Android Auto (tap version 10 times in settings). See the "Installation" section for details.
 
 ## Feedback
 
@@ -129,7 +139,7 @@ Found a bug or have a suggestion? Use "⋮ → Report a problem" in the app or c
 - The parameters were checked on a 2020 Mazda 3 (S8DPTS 1.8L engine); they should work across the SkyActiv-D range, and the main PIDs should work on the vast majority of cars.
 - The temperature before the particulate filter (`01 7C`) is not read: the 1.8 engine unit refuses the request (`7F 01 12`) and does not have this parameter (the 1.5 does); the row was removed from the parameters in 0.7.5. Exhaust gas temperatures (`01 78`, three sensors), however, are reported by the unit: they are written to the diagnostic log but not shown on the gauges.
 - Some observations (soot going down, exhaust temperatures, the `01 8B` burn-off state byte) were made on a car with a modified firmware and may differ on a stock one.
-- The difference between values 1 and 2 of the regeneration status (`22 0380`) is not confirmed on a car: a non-zero status accompanied a regeneration that started by itself at about 6.5 g/L of soot (one observation). On the "OBD connection" screen check the "Regeneration status (0/1/2)" line, it should show 0 outside a regeneration.
+- The difference between values 1 and 2 of the regeneration status (`22 0380`) is not confirmed on this car. According to FORScan developers, 0x02 (value 2) = regeneration requested/active (REG_REQ_A). A Japanese Torque Pro source reports 1 = active. Different engine variants may return different values. On the "OBD connection" screen check the "Regeneration status (0/1/2)" line; outside a regeneration it should show 0.
 - The default soot threshold of 6.5 g/L is an average; the real threshold for the 1.8 is not determined yet. The unit may also start a regeneration by mileage regardless of soot; such regenerations lower the observed threshold.
 - The "Now playing" line has not been tested with every player; after a pause the last track stays until the player is closed or the track changes.
 - The Android Auto projection uses an unofficial interface. Android Auto updates may break it, and third-party APKs require developer mode.

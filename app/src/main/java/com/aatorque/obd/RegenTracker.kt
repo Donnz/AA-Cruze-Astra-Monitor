@@ -235,37 +235,16 @@ class RegenTracker private constructor(private val prefs: SharedPreferences) {
     @Synchronized fun history(): List<RegenEntry> = ArrayList(log)
 
     /** Журнал прожигов и интервалы в текстовом виде: одна запись — одна строка, поля через «;». */
-    @Synchronized fun exportText(): String = buildString {
-        appendLine("# AA Mazda Monitor: журнал прожигов")
-        appendLine("# L;время_мс;сажа_г/л;пробег_км;состояние (0 идёт, 1 завершён, 2 прерван, 3 по счётчику)")
-        appendLine("# I;интервал_км")
-        for (e in log) appendLine("L;${e.time};${e.soot};${e.km ?: ""};${e.state}")
-        for (i in intervals) appendLine("I;$i")
-    }
+    @Synchronized fun exportText(): String = RegenLogParser.format(log, intervals)
 
     /**
      * Заменяет журнал и интервалы данными из текста (формат [exportText]). Возвращает число записей.
      * Неверные строки пропускаются: файл мог быть отредактирован руками.
      */
     @Synchronized fun importText(text: String): Int {
-        val entries = ArrayList<RegenEntry>()
-        val ivs = ArrayList<Double>()
-        for (raw in text.lineSequence()) {
-            val line = raw.trim()
-            if (line.isEmpty() || line.startsWith("#")) continue
-            val p = line.split(";")
-            when (p.getOrNull(0)) {
-                "L" -> {
-                    val t = p.getOrNull(1)?.toLongOrNull() ?: continue
-                    val s = p.getOrNull(2)?.toDoubleOrNull() ?: continue
-                    val km = p.getOrNull(3)?.toDoubleOrNull()
-                    val st = p.getOrNull(4)?.toIntOrNull() ?: RegenState.BY_COUNTER
-                    if (t <= 0 || s < 0 || s > 30 || st !in 0..3) continue
-                    entries.add(RegenEntry(t, s, km, st))
-                }
-                "I" -> p.getOrNull(1)?.toDoubleOrNull()?.takeIf { it > 0 }?.let { ivs.add(it) }
-            }
-        }
+        val parsed = RegenLogParser.parse(text)
+        val entries = ArrayList(parsed.entries)
+        val ivs = ArrayList(parsed.intervals)
         entries.sortBy { it.time }
         log.clear(); log.addAll(entries.takeLast(30))
         intervals.clear(); intervals.addAll(ivs.takeLast(50))

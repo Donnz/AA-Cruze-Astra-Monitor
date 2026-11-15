@@ -30,6 +30,9 @@
     <string name="element_wrench">Ключ</string>
     <string name="element_tire">Шины</string>
     <string name="pref_appearance">Оформление</string>
+    <string name="section_obd_summary">Адаптер, опрос, порог сажи</string>
+    <string name="section_experimental_summary">Сбор сажи, автопорог</string>
+    <string name="section_about">О программе</string>
     <string name="pref_centerclock">Центральный прибор</string>
     <string name="pref_font">Шрифт</string>
 
@@ -295,6 +298,7 @@
     <string name="obd_pref_dpf_threshold_default">%1$s г/л (по умолчанию)</string>
     <string name="obd_pref_dpf_threshold_value">%1$s г/л</string>
     <string name="obd_pref_dpf_threshold_summary">%1$s. Среднее значение, фактическое может отличаться. Если счётчик врёт, используйте «Экспериментальные функции».</string>
+    <string name="obd_pref_dpf_threshold_invalid">Введите значение от 0,5 до 20 г/л</string>
     <string name="obd_cat_app">Приложение</string>
     <string name="obd_action_experimental">Экспериментальные функции</string>
     <string name="obd_action_experimental_summary">Запись сажи перед прожигом и подбор порога для DPF %</string>
