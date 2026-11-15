@@ -39,8 +39,6 @@ import com.google.protobuf.InvalidProtocolBufferException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import org.json.JSONException
-import org.json.JSONObject
 import timber.log.Timber
 import java.io.IOException
 import java.net.ConnectException
@@ -388,7 +386,9 @@ class SettingsActivity : AppCompatActivity(),
 
         val url = URL(BuildConfig.RELEASE_URL)
         val urlConnection = url.openConnection() as HttpsURLConnection
-        urlConnection.setRequestProperty("X-GitHub-Api-Version", "2022-11-28")
+        // Не следуем редиректу автоматически — читаем Location, чтобы получить тег релиза.
+        // Это обходит лимит GitHub API (60 req/ч без токена), который давал 403.
+        urlConnection.instanceFollowRedirects = false
         try {
             urlConnection.connect()
         } catch (e: UnknownHostException) {
@@ -405,27 +405,24 @@ class SettingsActivity : AppCompatActivity(),
             return false
         }
         try {
-            if (urlConnection.responseCode == HttpURLConnection.HTTP_OK) {
-                val response = urlConnection.inputStream.bufferedReader().use {
-                    JSONObject(it.readText())
-                }
-                val tagName = response.optString("tag_name")
-                downloadItem = response.optJSONArray("assets")
-                    ?.takeIf { it.length() > 0 }
-                    ?.getJSONObject(0)
-                    ?.optString("browser_download_url")
-                    ?.takeIf { it.isNotBlank() }
-
+            val code = urlConnection.responseCode
+            if (code == HttpURLConnection.HTTP_MOVED_TEMP || code == HttpURLConnection.HTTP_MOVED_PERM || code == 302 || code == 301) {
+                val location = urlConnection.getHeaderField("Location")
+                // Location: https://github.com/.../releases/tag/0.8.6
+                val tagName = location?.substringAfterLast("/tag/")?.substringBefore("?")
                 checked = true
                 // Сравниваем коды версий по той же формуле, что в build.gradle, а не строки:
                 // «0.10.0» новее «0.9.1», хотя посимвольно это не так.
                 needsUpdate = UpdateCheck.isNewer(tagName, BuildConfig.VERSION_CODE)
+                if (needsUpdate == true && !tagName.isNullOrBlank()) {
+                    downloadItem = "${BuildConfig.REPO_URL}/releases/download/$tagName/app-release.apk"
+                }
                 if (needsUpdate == null) Timber.w("Проверка обновлений: тег «%s» не разобран", tagName)
             } else {
-                Timber.w("Проверка обновлений: GitHub ответил %d", urlConnection.responseCode)
+                Timber.w("Проверка обновлений: GitHub ответил %d", code)
             }
-        } catch (e: JSONException) {
-            Timber.e("Failed to parse json on update check")
+        } catch (e: Exception) {
+            Timber.e("Failed on update check: %s", e.message)
         } finally {
             urlConnection.disconnect()
         }
