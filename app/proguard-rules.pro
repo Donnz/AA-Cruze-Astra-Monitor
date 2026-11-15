@@ -56,7 +56,11 @@
   *;
 }
 
+# Намеренно: код приложения не обфусцируется, поэтому в экспортированном журнале остаются
+# читаемые теги (Timber берёт тег из имени класса) и понятные стектрейсы. Библиотеки при этом
+# обфусцируются — экономия размера остаётся. Снимать это правило нельзя: разбор журнала
+# опирается на теги ObdEngine, RegenTracker, TorqueRefresher и сообщения из этих классов.
 -keep,allowoptimization class com.aatorque.** { *; }
 
-# CardRecyclerView отличает разделители библиотеки настроек по имени класса.
--keep class androidx.preference.PreferenceFragmentCompat$DividerDecoration { *; }
+# Разделители библиотеки настроек отсекаются по типу (CardRecyclerView.addItemDecoration),
+# поэтому правило -keep для DividerDecoration больше не нужно: обфускация имени безопасна.

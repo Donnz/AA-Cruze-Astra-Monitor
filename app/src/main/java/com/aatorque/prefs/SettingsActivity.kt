@@ -22,7 +22,6 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContract
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
-import androidx.core.text.isDigitsOnly
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
 import androidx.fragment.app.FragmentTransaction
@@ -30,6 +29,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.preference.Preference
 import androidx.preference.PreferenceFragmentCompat
 import com.aatorque.datastore.UserPreference
+import com.aatorque.obd.RegenTracker
 import com.aatorque.stats.App
 import com.aatorque.stats.BuildConfig
 import com.aatorque.stats.CreditsFragment
@@ -154,6 +154,16 @@ class SettingsActivity : AppCompatActivity(),
                 true
             }
 
+            R.id.action_export_regen -> {
+                regenExportLauncher.launch("")
+                true
+            }
+
+            R.id.action_import_regen -> {
+                regenImportLauncher.launch("text/plain")
+                true
+            }
+
             R.id.action_copy_logs -> {
                 logsToClipboard()
                 true
@@ -243,6 +253,42 @@ class SettingsActivity : AppCompatActivity(),
     }
 
 
+    private val regenExportLauncher = registerForActivityResult(TextExportContract()) { uri: Uri? ->
+        if (uri == null) return@registerForActivityResult
+        val tracker = RegenTracker.get(getSharedPreferences(OBD_PREFS, MODE_PRIVATE))
+        lifecycleScope.launch(Dispatchers.IO) {
+            val ok = runCatching {
+                contentResolver.openOutputStream(uri)?.use { tracker.exportText().toByteArray(Charsets.UTF_8).let(it::write) } != null
+            }.getOrDefault(false)
+            runOnUiThread {
+                Toast.makeText(
+                    baseContext,
+                    if (ok) R.string.regen_exported else R.string.export_failed,
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        }
+    }
+
+    private val regenImportLauncher = registerForActivityResult(ImportFileContract()) { uri: Uri? ->
+        if (uri == null) return@registerForActivityResult
+        val tracker = RegenTracker.get(getSharedPreferences(OBD_PREFS, MODE_PRIVATE))
+        lifecycleScope.launch(Dispatchers.IO) {
+            val count = runCatching {
+                contentResolver.openInputStream(uri)
+                    ?.use { tracker.importText(it.readBytes().toString(Charsets.UTF_8)) }
+            }.getOrNull()
+            runOnUiThread {
+                val text = when {
+                    count == null -> getString(R.string.import_failed)
+                    count == 0 -> getString(R.string.regen_import_empty)
+                    else -> getString(R.string.regen_imported, count)
+                }
+                Toast.makeText(baseContext, text, Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
     private val importFileLauncher = registerForActivityResult(ImportFileContract()) { uri: Uri? ->
         if (uri != null) {
             val inStream = contentResolver.openInputStream(uri)
@@ -279,6 +325,20 @@ class SettingsActivity : AppCompatActivity(),
             } else {
                 null
             }
+        }
+    }
+
+    class TextExportContract : ActivityResultContract<String, Uri?>() {
+
+        override fun createIntent(context: Context, input: String): Intent {
+            return Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+                type = "text/plain"
+                putExtra(Intent.EXTRA_TITLE, "regen-log.csv")
+            }
+        }
+
+        override fun parseResult(resultCode: Int, intent: Intent?): Uri? {
+            return if (resultCode == Activity.RESULT_OK) intent?.data else null
         }
     }
 
@@ -368,12 +428,16 @@ class SettingsActivity : AppCompatActivity(),
         try {
             urlConnection.connect()
         } catch (e: UnknownHostException) {
+            Timber.w("Проверка обновлений: нет сети (%s)", e.message)
             return false
         } catch (e: ConnectException) {
+            Timber.w("Проверка обновлений: GitHub недоступен (%s)", e.message)
             return false
         } catch (e: SSLException) {
+            Timber.w("Проверка обновлений: ошибка TLS (%s)", e.message)
             return false
         } catch (e: IOException) {
+            Timber.w("Проверка обновлений: ошибка сети (%s)", e.message)
             return false
         }
         try {
@@ -381,26 +445,20 @@ class SettingsActivity : AppCompatActivity(),
                 val response = urlConnection.inputStream.bufferedReader().use {
                     JSONObject(it.readText())
                 }
-                val tagName = response.getString("tag_name")
-                downloadItem = response.getJSONArray("assets")
-                    .getJSONObject(0)
-                    .getString("browser_download_url")
+                val tagName = response.optString("tag_name")
+                downloadItem = response.optJSONArray("assets")
+                    ?.takeIf { it.length() > 0 }
+                    ?.getJSONObject(0)
+                    ?.optString("browser_download_url")
+                    ?.takeIf { it.isNotBlank() }
 
                 checked = true
-                val tagSplit = tagName.removePrefix("v").removePrefix("V").split(".")
-                val existingSplit = BuildConfig.VERSION_NAME.split(".")
-
-                tagSplit.forEachIndexed { pos, fromServer ->
-                    if (needsUpdate == null && existingSplit.size > pos) {
-                        val toComp = existingSplit[pos]
-                        if (
-                            fromServer != toComp &&
-                            fromServer.isDigitsOnly() && toComp.isDigitsOnly()
-                        ) {
-                            needsUpdate = fromServer.toInt() > toComp.toInt()
-                        }
-                    }
-                }
+                // Сравниваем коды версий по той же формуле, что в build.gradle, а не строки:
+                // «0.10.0» новее «0.9.1», хотя посимвольно это не так.
+                needsUpdate = UpdateCheck.isNewer(tagName, BuildConfig.VERSION_CODE)
+                if (needsUpdate == null) Timber.w("Проверка обновлений: тег «%s» не разобран", tagName)
+            } else {
+                Timber.w("Проверка обновлений: GitHub ответил %d", urlConnection.responseCode)
             }
         } catch (e: JSONException) {
             Timber.e("Failed to parse json on update check")
@@ -409,8 +467,7 @@ class SettingsActivity : AppCompatActivity(),
         }
 
 
-        if (needsUpdate == true) {
-            assert(downloadItem != null)
+        if (needsUpdate == true && downloadItem != null) {
             Snackbar.make(
                 findViewById(android.R.id.content),
                 R.string.new_version,
@@ -475,6 +532,7 @@ class SettingsActivity : AppCompatActivity(),
         private const val PERMISSION_CAR_VENDOR_EXTENSION =
             "com.google.android.gms.permission.CAR_VENDOR_EXTENSION"
         const val EXPORT_MIME = "application/octet-stream"
+        private const val OBD_PREFS = "obd_bridge"
     }
 private fun startObd() {
     val need = mutableListOf<String>()

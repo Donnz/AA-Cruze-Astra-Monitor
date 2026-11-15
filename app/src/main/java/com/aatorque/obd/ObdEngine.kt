@@ -118,8 +118,8 @@ class ObdEngine(
             val raw = diagRaw("01$pid")
             Timber.i("Диагностика 01%s: %s", pid, raw.replace(Regex("\\s+"), " ").trim().take(160))
             if (pid == "78") parse(raw, "4178")?.takeIf { it.size >= 9 }?.let { b ->
-                val t = (0 until 4).filter { i -> b[1 + 2 * i] != 0 || b[2 + 2 * i] != 0 }   // нулевой датчик отсутствует
-                    .joinToString(" ") { i -> "%.1f".format((b[1 + 2 * i] * 256 + b[2 + 2 * i]) / 10.0 - 40.0) }
+                val t = ElmParse.egtTemperatures(b)   // нулевой датчик отсутствует и пропускается
+                    .joinToString(" ") { "%.1f".format(it) }
                 Timber.i("Диагностика 0178: флаги %02X, температуры %s °C", b[0], t)
             }
         }
@@ -206,20 +206,5 @@ class ObdEngine(
     }
 
     /** Байты ответа после префикса (например «410C» или «620434»); null, если ответа нет. */
-    private fun parse(text: String?, prefix: String): IntArray? {
-        if (text.isNullOrBlank()) return null
-        val lines = text.uppercase().split(Regex("[\\r\\n]+")).map { it.trim() }.filter { it.isNotEmpty() }
-        val multi = lines.any { Regex("^[0-9A-F]\\s*:").containsMatchIn(it) }
-        val sb = StringBuilder()
-        for (l in lines) {
-            if (multi) {
-                Regex("^[0-9A-F]\\s*:([0-9A-F ]*)$").find(l)?.let { sb.append(it.groupValues[1]) }
-            } else if (Regex("^[0-9A-F ]+$").matches(l)) sb.append(l)
-        }
-        val hex = sb.toString().replace(" ", "")
-        val i = hex.indexOf(prefix.uppercase())
-        if (i < 0) return null
-        val rest = hex.substring(i + prefix.length)
-        return IntArray(rest.length / 2) { rest.substring(it * 2, it * 2 + 2).toInt(16) }
-    }
+    private fun parse(text: String?, prefix: String): IntArray? = ElmParse.bytes(text, prefix)
 }
