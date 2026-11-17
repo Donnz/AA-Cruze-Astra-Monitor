@@ -108,7 +108,7 @@
     <string name="pidLabel">Label</string>
     <string name="pidShowLabel">Show Label</string>
     <string name="icon">Icon</string>
-    <string name="torque_waiting">Waiting for Torque to become available</string>
+    <string name="torque_waiting">Waiting for OBD to become available</string>
     <string name="min_value">Minimum value</string>
     <string name="max_value">Maximum value</string>
     <string name="num_screens">Number of dashboards to display</string>
@@ -122,7 +122,7 @@
     <string name="custom_script_desc">Run an EvalEx expression. Use a to represent the current value</string>
     <string name="formulas">Formulas</string>
     <string name="custom_expression">Custom expression</string>
-    <string name="status_connecting_torque">Connecting to Torque…</string>
+    <string name="status_connecting_torque">Connecting to OBD…</string>
     <string name="status_connecting_to_ecu">Connecting to ECU…</string>
     <string name="credits_modifications">Developed by:</string>
     <string name="export_dashboards">Export dashboards</string>

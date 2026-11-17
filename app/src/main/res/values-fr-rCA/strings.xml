@@ -98,7 +98,7 @@
     <string name="pidLabel">Libellé</string>
     <string name="pidShowLabel">Afficher Libellé</string>
     <string name="icon">Icône</string>
-    <string name="torque_waiting">Attendre que Torque soit disponible</string>
+    <string name="torque_waiting">Attendre que OBD soit disponible</string>
 
     <!-- Fuzzy -->
     <string name="min_value">Valeur Min</string>
@@ -118,7 +118,7 @@
     <string name="custom_script_desc">Exécuter une expression EvalEx. Utiliser a pour représenter la valeur courante</string>
     <string name="formulas">Formules</string>
     <string name="custom_expression">Expression personnalisée</string>
-    <string name="status_connecting_torque">Connexion à Torque…</string>
+    <string name="status_connecting_torque">Connexion à OBD…</string>
     <string name="status_connecting_to_ecu">Connexion à l\'ECU…</string>
 
     <!-- Fuzzy -->

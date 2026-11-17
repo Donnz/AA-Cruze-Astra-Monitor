@@ -22,10 +22,6 @@
 
 
 
-    <queries>
-        <package android:name="org.prowl.torque" />
-    </queries>
-
     <uses-permission android:name="android.permission.BLUETOOTH_SCAN" android:usesPermissionFlags="neverForLocation"/>
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" android:maxSdkVersion="30"/>
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
@@ -67,11 +63,6 @@
 
                 <category android:name="com.google.android.gms.car.category.CATEGORY_PROJECTION" />
                 <category android:name="com.google.android.gms.car.category.CATEGORY_PROJECTION_OEM" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="org.prowl.torque.remote.TorqueService" />
-
-                <category android:name="com.google.android.gms.car.category.DEFAULT" />
             </intent-filter>
         </service>
         <service

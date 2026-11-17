@@ -36,6 +36,17 @@ class ObdEngine(
     /** Подряд идущие сбои связи; сервис переподключается, когда их набирается 5. */
     @Volatile var failures = 0
         private set
+    private var okStreak = 0
+
+    /** Обмен прошёл: счётчик сбоев сбрасывается только после трёх успехов подряд, иначе «мигающая» связь никогда не приведёт к переподключению. */
+    private fun onOk() {
+        if (failures > 0 && ++okStreak >= 3) { failures = 0; okStreak = 0 }
+    }
+
+    private fun onFail() {
+        okStreak = 0
+        failures++
+    }
 
     /** Порог сажи (г/л) для расчёта процента заполнения; 0 — не задан. */
     fun dpfFullGl(): Double {
@@ -59,9 +70,9 @@ class ObdEngine(
             r = parse(send("7E0", "0100", 8000), "4100")
         }
         if (r == null) throw IOException(context.getString(R.string.obd_engine_no_response))
-        readSupported(r)
-        Timber.i("Режим 01, заявлено блоком: %s", supported.sorted().joinToString(",") { "%02X".format(it) })
-        failures = 0
+                readSupported(r)
+        Timber.i("Режим 01, заявлено блоком: %s", supported.sorted().joinToString(", ") { "%02X".format(it) })
+        failures = 0; okStreak = 0
         readId("33")                                       // барометр нужен для расчёта наддува
         bg = Thread(::backgroundLoop, "obd-regen").also { it.isDaemon = true; it.start() }
     }
@@ -94,7 +105,7 @@ class ObdEngine(
     private fun diagRaw(req: String): String = try {
         // без цифры-счётчика: иначе адаптер отдаёт только первый кадр многокадрового ответа
         send("7E0", req, 2500)
-    } catch (e: IOException) { failures++; "ошибка связи: " + (e.message ?: "") }
+    } catch (e: IOException) { onFail(); "ошибка связи: " + (e.message ?: "") }
 
     /** Раз в 30 с пишет в журнал строку состояния (значения берутся из кэша, запросов к блоку нет). */
     private fun stateLog() {
@@ -139,10 +150,11 @@ class ObdEngine(
         val ttl = if (p.slow) slowMs() else fastMs()
         if (!force) cache[p.id]?.let { if (now - it.t < ttl) return it.v }
         var failed = false
-        var v = try { fetch(p) } catch (e: IOException) { failures++; failed = true; lastRaw = e.message ?: "ошибка связи"; null }
+        var v = try { fetch(p) } catch (e: IOException) { failed = true; lastRaw = e.message ?: "ошибка связи"; null }
         if (v == null && !failed && p.virtual == null && p.header != "7E0") {   // блок АКПП иногда молчит: один быстрый повтор
-            v = try { fetch(p) } catch (e: IOException) { failures++; failed = true; lastRaw = e.message ?: "ошибка связи"; null }
+            v = try { fetch(p) } catch (e: IOException) { failed = true; lastRaw = e.message ?: "ошибка связи"; null }
         }
+        if (failed) onFail() else onOk()
         val t = System.currentTimeMillis()
         var shown: Double? = v
         if (v != null) {
@@ -182,7 +194,6 @@ class ObdEngine(
             text = send(p.header, req, 1500)
         }
         lastRaw = text
-        failures = 0
         val b = parse(text, prefix) ?: return null
         return p.decode?.invoke(b)
     }

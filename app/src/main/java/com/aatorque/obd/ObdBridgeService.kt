@@ -273,7 +273,7 @@ class ObdBridgeService : Service() {
                 val t = createTarget()
                 if (t == null) {
                     // Не крутимся бесконечно, если адаптера нет: после 5 попыток служба останавливается.
-                    if (++failures >= MAX_CONNECT_ATTEMPTS) { stopSelf(); break }
+                    if (++failures >= MAX_CONNECT_ATTEMPTS) { giveUp(); break }
                     Thread.sleep(5000); continue
                 }
                 post(getString(R.string.obd_status_connecting, t.label))
@@ -301,10 +301,18 @@ class ObdBridgeService : Service() {
                 engine?.close(); engine = null
                 link?.close()
                 post(ex.message ?: getString(R.string.obd_err_generic))
-                if (++failures >= MAX_CONNECT_ATTEMPTS) { stopSelf(); break }
+                if (++failures >= MAX_CONNECT_ATTEMPTS) { giveUp(); break }
                 try { Thread.sleep(3000) } catch (_: InterruptedException) { break }
             }
         }
+    }
+
+    /** Попытки кончились: снимаем уведомление, иначе при активной привязке оно висит со старым статусом. */
+    private fun giveUp() {
+        post(getString(R.string.obd_status_stopped))
+        runCatching { stopForeground(STOP_FOREGROUND_REMOVE) }
+        isForeground = false
+        stopSelf()
     }
 
     @SuppressLint("MissingPermission")

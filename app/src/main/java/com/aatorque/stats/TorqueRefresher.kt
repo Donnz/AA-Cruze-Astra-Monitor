@@ -3,12 +3,10 @@ import android.os.Handler
 import android.os.Looper
 import com.aatorque.datastore.Display
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.runInterruptible
 import timber.log.Timber
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.ScheduledThreadPoolExecutor
 import java.util.concurrent.TimeUnit
 
@@ -16,13 +14,20 @@ enum class ConnectStatus {
     CONNECTING_TORQUE, CONNECTING_ECU, CONNECTED, SETUP_GAUGE
 }
 
+/**
+ * Обновление приборов. Один таймер на экран и один пакетный запрос всех датчиков:
+ * ELM327 не успевает за семью отдельными опросами по 300 мс, из-за чего росла очередь
+ * и значения отставали от реальных.
+ */
 class TorqueRefresher {
-    val data = HashMap<Int, TorqueData>()
-    private val executor = ScheduledThreadPoolExecutor(7)
+    /** Ключ — позиция элемента на экране; меняется из главного потока, читается из таймера. */
+    val data = ConcurrentHashMap<Int, TorqueData>()
+    private val executor = ScheduledThreadPoolExecutor(1).apply { removeOnCancelPolicy = true }
     val handler = Handler(Looper.getMainLooper())
-    private var conWatcher = MutableStateFlow(ConnectStatus.CONNECTING_TORQUE)
+    private val conWatcher = MutableStateFlow(ConnectStatus.CONNECTING_TORQUE)
     val connectStatus = conWatcher.asSharedFlow()
-    val cache = mutableMapOf<Int, HashMap<Int, TorqueData>>()
+    val cache = HashMap<Int, HashMap<Int, TorqueData>>()
+    private var batchTimer: ScheduledFuture<*>? = null
 
     companion object {
         const val REFRESH_INTERVAL = 300L
@@ -45,63 +50,69 @@ class TorqueRefresher {
     }
 
     suspend fun makeExecutors(service: TorqueService) {
-        var foundValid = false
-        data.values.forEachIndexed { index, torqueData ->
-            val refreshOffset = (REFRESH_INTERVAL / data.size) * index
-            if (torqueData.pid != null) {
-                foundValid = true
-                if (torqueData.refreshTimer == null) {
-                    Timber.i("Scheduled item in position $index with $refreshOffset delay")
-                    doRefresh(service, torqueData)
-                    torqueData.refreshTimer = executor.scheduleWithFixedDelay({
-                        try {
-                            doRefresh(service, torqueData)
-                        } catch (e: Exception) {
-                            Timber.e("Refresh failed in pos $index", e)
-                        }
-                    }, refreshOffset, REFRESH_INTERVAL, TimeUnit.MILLISECONDS)
+        val foundValid = data.values.any { it.pid != null }
+        if (foundValid && batchTimer == null) {
+            Timber.i("Scheduled batch refresh for ${data.size} items")
+            batchTimer = executor.scheduleWithFixedDelay({
+                try {
+                    doRefreshBatch(service)
+                } catch (e: Exception) {
+                    Timber.e("Refresh failed", e)
                 }
-            } else {
-                Timber.i("No reason to schedule item in position $index")
-            }
+            }, 0, REFRESH_INTERVAL, TimeUnit.MILLISECONDS)
         }
-        conWatcher.emit(if (foundValid) conWatcher.value else ConnectStatus.SETUP_GAUGE)
+        if (!foundValid) conWatcher.value = ConnectStatus.SETUP_GAUGE
         service.addConnectCallback {
             if (conWatcher.value == ConnectStatus.CONNECTING_TORQUE) {
-                runBlocking {
-                    conWatcher.emit(ConnectStatus.CONNECTING_ECU)
-                }
+                conWatcher.value = ConnectStatus.CONNECTING_ECU
             }
         }
     }
 
-    fun doRefresh(service: TorqueService, torqueData: TorqueData) {
+    /** Один запрос на все датчики экрана; ответ раскладывается по элементам в том же порядке. */
+    private fun doRefreshBatch(service: TorqueService) {
+        val items = data.entries
+            .mapNotNull { (pos, torqueData) -> torqueData.pid?.let { pos to it } }
+            .sortedBy { it.first }
+        if (items.isEmpty()) return
         service.runIfConnected { ts ->
-            val value = try {
-                ts.getPIDValuesAsDouble(arrayOf(torqueData.pid!!))[0]
-            } catch (e: ArrayIndexOutOfBoundsException) {
-                Timber.e("Torque returned invalid data for ${torqueData.pid}")
+            val values = try {
+                ts.getPIDValuesAsDouble(items.map { it.second }.toTypedArray())
+            } catch (e: Exception) {
+                Timber.e("Torque returned invalid data for ${items.map { it.second }}", e)
                 return@runIfConnected
             }
-            torqueData.lastData = value
-            Timber.d("Got valid $value from torque for ${torqueData.display.label}")
-            if (value != 0.0 || torqueData.hasReceivedNonZero) {
-                torqueData.hasReceivedNonZero = true
-                handler.post {
-                    torqueData.sendNotifyUpdate()
-                }
-                runBlocking {
-                    conWatcher.emit(ConnectStatus.CONNECTED)
+            var anyValue = false
+            items.forEachIndexed { index, (pos, pid) ->
+                val torqueData = data[pos] ?: return@forEachIndexed
+                val value = values.getOrNull(index) ?: return@forEachIndexed
+                torqueData.lastData = value
+                Timber.d("Got valid $value from torque for ${torqueData.display.label}")
+                if (value != 0.0 || torqueData.hasReceivedNonZero) {
+                    torqueData.hasReceivedNonZero = true
+                    anyValue = true
+                    handler.post {
+                        torqueData.sendNotifyUpdate()
+                    }
                 }
             }
+            if (anyValue) conWatcher.value = ConnectStatus.CONNECTED
         }
     }
 
     fun stopExecutors() {
         Timber.i("Telling Torque refreshers to stop")
+        batchTimer?.cancel(true)
+        batchTimer = null
         for (td in data.values) {
             td.stopRefreshing()
         }
+    }
+
+    /** Экран уничтожен: таймер и поток исполнителя больше не нужны. */
+    fun shutdown() {
+        stopExecutors()
+        executor.shutdownNow()
     }
 
     fun hasChanged(idx: Int, otherScreen: Display?): Boolean {

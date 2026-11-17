@@ -98,7 +98,7 @@
     <string name="pidLabel">Etykieta</string>
     <string name="pidShowLabel">Pokaż etykietę</string>
     <string name="icon">Ikona</string>
-    <string name="torque_waiting">Czekamy na dostępność Torque</string>
+    <string name="torque_waiting">Czekamy na dostępność OBD</string>
     <string name="min_value">Wartość minimalna</string>
     <string name="max_value">Maksymalna wartość</string>
     <string name="num_screens">Liczba wyświetlanych pulpitów nawigacyjnych</string>
@@ -112,7 +112,7 @@
     <string name="custom_script_desc">Uruchom wyrażenie EvalEx. Użyj a do przedstawienia bieżącej wartości</string>
     <string name="formulas">Formuły</string>
     <string name="custom_expression">Wyrażenie niestandardowe</string>
-    <string name="status_connecting_torque">Łączenie z Torque…</string>
+    <string name="status_connecting_torque">Łączenie z OBD…</string>
     <string name="status_connecting_to_ecu">Łączenie z ECU…</string>
     <string name="credits_modifications">Opracowane przez:</string>
     <string name="export_dashboards">Eksportuj pulpity nawigacyjne</string>

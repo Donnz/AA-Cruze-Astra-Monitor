@@ -16,17 +16,18 @@ class TorqueData(var display: Display) {
     companion object {
         const val PREFIX = "torque_"
         val drawableRegex = Regex("res/drawable/(?<name>.+)\\.[a-z]+")
-        val twoPlaces: NumberFormat = NumberFormat.getNumberInstance()
-        val intPlaces: NumberFormat = NumberFormat.getIntegerInstance()
     }
 
-    init {
-        twoPlaces.maximumFractionDigits = 2
-        twoPlaces.minimumFractionDigits = 0
-        twoPlaces.isGroupingUsed = true
-        intPlaces.isGroupingUsed = true
-        twoPlaces.roundingMode = BigDecimal.ROUND_HALF_UP
-        twoPlaces.roundingMode = BigDecimal.ROUND_HALF_UP
+    // NumberFormat не потокобезопасен, а значения приходят из потока опроса: у каждого элемента
+    // свои экземпляры, иначе параллельное форматирование даёт битые числа.
+    private val twoPlaces: NumberFormat = NumberFormat.getNumberInstance().apply {
+        maximumFractionDigits = 2
+        minimumFractionDigits = 0
+        isGroupingUsed = true
+        roundingMode = BigDecimal.ROUND_HALF_UP
+    }
+    private val intPlaces: NumberFormat = NumberFormat.getIntegerInstance().apply {
+        isGroupingUsed = true
     }
 
     var pid: String? = null

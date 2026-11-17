@@ -96,7 +96,7 @@
     <string name="pidLabel">Επιγραφή</string>
     <string name="pidShowLabel">Εμφάνιση ετικέτας</string>
     <string name="icon">Εικονίδιο</string>
-    <string name="torque_waiting">Αναμονή για να γίνει διαθέσιμο το Torque</string>
+    <string name="torque_waiting">Αναμονή για να γίνει διαθέσιμο το OBD</string>
 
     <!-- Fuzzy -->
     <string name="min_value">Ελάχιστη τιμή</string>
@@ -116,7 +116,7 @@
     <string name="custom_script_desc">Εκτελέστε μια έκφραση EvalEx. Χρησιμοποιήστε το a για να αναπαραστήσετε την τρέχουσα τιμή</string>
     <string name="formulas">ΜΑΘΗΜΑΤΙΚΟΙ τυποι</string>
     <string name="custom_expression">Προσαρμοσμένη έκφραση</string>
-    <string name="status_connecting_torque">Σύνδεση στο Torque…</string>
+    <string name="status_connecting_torque">Σύνδεση στο OBD…</string>
     <string name="status_connecting_to_ecu">Σύνδεση σε ECU…</string>
 
     <!-- Fuzzy -->

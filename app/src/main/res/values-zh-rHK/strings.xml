@@ -93,7 +93,7 @@
     <string name="pidLabel">標籤</string>
     <string name="pidShowLabel">顯示標籤</string>
     <string name="icon">圖示</string>
-    <string name="torque_waiting">等待Torque 準備</string>
+    <string name="torque_waiting">等待OBD 準備</string>
 
     <!-- Fuzzy -->
     <string name="min_value">最小值</string>
@@ -111,7 +111,7 @@
     <string name="custom_script_desc">運行 EvalEx 表達式。使用a代表當前值</string>
     <string name="formulas">公式</string>
     <string name="custom_expression">自訂表達式</string>
-    <string name="status_connecting_torque">連接到 Torque…</string>
+    <string name="status_connecting_torque">連接到 OBD…</string>
     <string name="status_connecting_to_ecu">連接到 ECU...</string>
     <string name="credits_modifications">開發者：</string>
     <string name="export_dashboards">匯出儀表板</string>

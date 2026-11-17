@@ -105,12 +105,7 @@ class TorqueServiceWrapper: Service() {
 
 
     private val torqueConnection: ServiceConnection = object : ServiceConnection {
-        /**
-         * What to do when we get connected to Torque.
-         *
-         * @param arg0
-         * @param service
-         */
+        /** Что делать, когда служба OBD подключилась. */
         override fun onServiceConnected(arg0: ComponentName, service: IBinder) {
             val svc = ITorqueService.Stub.asInterface(service)
             conLock.withLock {
@@ -122,11 +117,7 @@ class TorqueServiceWrapper: Service() {
             torqueService = svc
         }
 
-        /**
-         * What to do when we get disconnected from Torque.
-         *
-         * @param name
-         */
+        /** Что делать при отключении службы OBD. */
         override fun onServiceDisconnected(name: ComponentName) {
             torqueService = null
         }
@@ -138,7 +129,7 @@ class TorqueServiceWrapper: Service() {
         val torqueBind = bindService(intent, torqueConnection, Activity.BIND_AUTO_CREATE)
         bound = torqueBind
         Timber.i(
-            if (torqueBind) "Connected to torque service!" else "Unable to connect to Torque plugin service"
+            if (torqueBind) "Connected to OBD service!" else "Unable to connect to OBD service"
         )
         return torqueBind
     }

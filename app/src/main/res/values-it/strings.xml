@@ -94,7 +94,7 @@
     <string name="pidLabel">Etichetta</string>
     <string name="pidShowLabel">Mostra etichetta</string>
     <string name="icon">Icona</string>
-    <string name="torque_waiting">In attesa che Torque torni disponibile</string>
+    <string name="torque_waiting">In attesa che OBD torni disponibile</string>
     <string name="min_value">Valore minimo</string>
     <string name="max_value">Valore massimo</string>
     <string name="num_screens">Numero quadri visualizzati</string>
@@ -108,7 +108,7 @@
     <string name="custom_script_desc">Esegui espressione EvalEx. Usa A per il valore corrente</string>
     <string name="formulas">Formule</string>
     <string name="custom_expression">Espressione personalizzata</string>
-    <string name="status_connecting_torque">Connessione a Torque…</string>
+    <string name="status_connecting_torque">Connessione a OBD…</string>
     <string name="status_connecting_to_ecu">Connessione a ECU…</string>
     <string name="credits_modifications">Sviluppata da:</string>
     <string name="export_dashboards">Esporta quadri</string>

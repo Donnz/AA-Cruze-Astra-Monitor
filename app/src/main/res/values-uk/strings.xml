@@ -98,7 +98,7 @@
     <string name="pidLabel">Мітка</string>
     <string name="pidShowLabel">Показати мітку</string>
     <string name="icon">Значок</string>
-    <string name="torque_waiting">Чекаємо, коли Torque стане доступним</string>
+    <string name="torque_waiting">Чекаємо, коли OBD стане доступним</string>
 
     <!-- Fuzzy -->
     <string name="min_value">Мінімальне значення</string>
@@ -118,7 +118,7 @@
     <string name="custom_script_desc">Запустити вираз EvalEx. Використовуйте a для представлення поточного значення</string>
     <string name="formulas">Формула</string>
     <string name="custom_expression">Користувацький вираз</string>
-    <string name="status_connecting_torque">Підключення до Torque...</string>
+    <string name="status_connecting_torque">Підключення до OBD...</string>
     <string name="status_connecting_to_ecu">Підключення до ЕБУ...</string>
 
     <!-- Fuzzy -->

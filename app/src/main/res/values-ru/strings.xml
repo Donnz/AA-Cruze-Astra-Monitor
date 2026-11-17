@@ -71,7 +71,7 @@
     <string name="pidLabel">Название</string>
     <string name="pidShowLabel">Показывать название</string>
     <string name="icon">Иконка</string>
-    <string name="torque_waiting">Ожидание Torque</string>
+    <string name="torque_waiting">Ожидание OBD</string>
 
     <!-- Fuzzy -->
     <string name="min_value">Минимальное значение</string>
@@ -85,7 +85,7 @@
     <string name="rotary_desc">Убрать кнопки и использвать шайбу для управления</string>
     <string name="custom_script">Конверсия ед.изм.</string>
     <string name="formulas">Формулы</string>
-    <string name="status_connecting_torque">Соединение с Torque</string>
+    <string name="status_connecting_torque">Соединение с OBD</string>
     <string name="status_connecting_to_ecu">Соединение с ECU</string>
     <string name="export_dashboards">Экспорт панелей приборов</string>
     <string name="import_dashboards">Импорт панелей приборов</string>

@@ -39,12 +39,7 @@ class TorqueService {
     private val torqueConnection = object : ServiceConnection {
         var forceReconnect: (()-> Unit)? = null
 
-        /**
-         * What to do when we get connected to Torque.
-         *
-         * @param arg0
-         * @param service
-         */
+        /** Что делать, когда служба OBD подключилась. */
         override fun onServiceConnected(arg0: ComponentName, service: IBinder) {
             try {
                 val svc = ITorqueService.Stub.asInterface(service)
@@ -65,11 +60,7 @@ class TorqueService {
             }
         }
 
-        /**
-         * What to do when we get disconnected from Torque.
-         *
-         * @param name
-         */
+        /** Что делать при отключении службы OBD. */
         override fun onServiceDisconnected(name: ComponentName) {
             torqueService = null
         }
@@ -86,10 +77,6 @@ class TorqueService {
         torqueService = null
     }
 
-    fun requestQuit(context: Context) {
-        context.sendBroadcast(Intent("org.prowl.torque.REQUEST_TORQUE_QUIT"))
-        Timber.i("Torque stop")
-    }
     fun startTorque(context: Context): Boolean {
         val intent = Intent(context, ObdBridgeService::class.java)
         ObdBridgeService.start(context)
@@ -99,7 +86,7 @@ class TorqueService {
             context.bindService(intent, torqueConnection, Activity.BIND_AUTO_CREATE)
         }
         Timber.i(
-            if (hasBound) "Connected to torque service!" else "Unable to connect to Torque plugin service"
+            if (hasBound) "Connected to OBD service!" else "Unable to connect to OBD service"
         )
         return hasBound
     }

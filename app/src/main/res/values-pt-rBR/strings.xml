@@ -82,7 +82,7 @@
     <string name="pidLabel">Rótulo</string>
     <string name="pidShowLabel">Mostrar rótulo</string>
     <string name="icon">Ícone</string>
-    <string name="torque_waiting">Esperando Torque ficar disponível</string>
+    <string name="torque_waiting">Esperando OBD ficar disponível</string>
 
     <!-- Fuzzy -->
     <string name="min_value">Valor mínimo</string>

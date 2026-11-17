@@ -96,7 +96,7 @@
     <string name="pidLabel">Beschreibung</string>
     <string name="pidShowLabel">Beschreibung anzeigen</string>
     <string name="icon">Symbol</string>
-    <string name="torque_waiting">Auf Start von Torque warten</string>
+    <string name="torque_waiting">Auf Start von OBD warten</string>
     <string name="min_value">Minimaler Wert</string>
     <string name="max_value">Maximaler Wert</string>
     <string name="num_screens">Anzahl an Instrumententafeln zur Anzeige</string>
@@ -110,7 +110,7 @@
     <string name="custom_script_desc">EvalEx-Ausdruck ausführen. Nutzen Sie für den aktuellen Wert \'a\'.</string>
     <string name="formulas">Formeln</string>
     <string name="custom_expression">Benutzerdefinierter Ausdruck</string>
-    <string name="status_connecting_torque">Verbindungsaufbau zu Torque...</string>
+    <string name="status_connecting_torque">Verbindungsaufbau zu OBD...</string>
     <string name="status_connecting_to_ecu">Verbindungsaufbau zur ECU...</string>
     <string name="credits_modifications">Entwickelt von:</string>
     <string name="export_dashboards">Instrumententafeln exportieren</string>

@@ -9,8 +9,10 @@ import com.aatorque.prefs.dataStore
 import com.aatorque.prefs.mapTheme
 import com.aatorque.stats.ListMenuAdapter.MenuCallbacks
 import com.google.android.apps.auto.sdk.CarActivity
-import kotlinx.coroutines.DelicateCoroutinesApi
-import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.first
@@ -21,6 +23,8 @@ import timber.log.Timber
 
 
 class MainCarActivity : CarActivity() {
+    /** Свой scope вместо GlobalScope: коллекторы темы отменяются вместе с активностью. */
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var mCurrentFragmentTag: String? = null
     private val mMenuCallbacks: MenuCallbacks = object : MenuCallbacks {
         override fun onMenuItemClicked(name: String) {
@@ -51,13 +55,13 @@ class MainCarActivity : CarActivity() {
         return super.onKeyDown(keyCode, event)
     }
 
-    @OptIn(DelicateCoroutinesApi::class)
     override fun onCreate(bundle: Bundle?) {
         super.onCreate(bundle)
+        // Тему нужно знать до создания фрагментов, поэтому первое значение читаем синхронно.
         val data = runBlocking {
             dataStore.data.first()
         }
-        GlobalScope.launch {
+        scope.launch {
             dataStore.data.map {
                 it.selectedTheme
             }.distinctUntilChanged().drop(1).collect(
@@ -94,6 +98,11 @@ class MainCarActivity : CarActivity() {
         setIgnoreConfigChanges(0xFFFF)
     }
 
+
+    override fun onDestroy() {
+        scope.cancel()
+        super.onDestroy()
+    }
 
     override fun onSaveInstanceState(bundle: Bundle) {
         bundle.putString(CURRENT_FRAGMENT_KEY, mCurrentFragmentTag)
