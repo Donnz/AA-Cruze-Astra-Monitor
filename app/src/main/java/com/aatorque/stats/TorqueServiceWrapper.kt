@@ -17,6 +17,7 @@ import kotlin.concurrent.withLock
 typealias PidInfo = List<Pair<String, List<String>>>
 class TorqueServiceWrapper: Service() {
     private val binder = LocalBinder()
+    private var bound = false
     var wasStartAttempted = false
     var torqueService: ITorqueService? = null
     val onConnect = ArrayList<(ITorqueService) -> Unit>()
@@ -35,8 +36,11 @@ class TorqueServiceWrapper: Service() {
     override fun onDestroy() {
         super.onDestroy()
         connectCount--
-        if (connectCount == 0) {
-            unbindService(torqueConnection)
+        // unbindService бросает IllegalArgumentException, если привязки не было
+        // (startTorque вернул false), поэтому проверяем флаг и глушим исключение.
+        if (connectCount == 0 && bound) {
+            runCatching { unbindService(torqueConnection) }
+            bound = false
         }
     }
 
@@ -132,6 +136,7 @@ class TorqueServiceWrapper: Service() {
         val intent = Intent(this, ObdBridgeService::class.java)
         ObdBridgeService.start(this)
         val torqueBind = bindService(intent, torqueConnection, Activity.BIND_AUTO_CREATE)
+        bound = torqueBind
         Timber.i(
             if (torqueBind) "Connected to torque service!" else "Unable to connect to Torque plugin service"
         )

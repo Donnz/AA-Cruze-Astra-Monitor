@@ -76,11 +76,14 @@ class TorqueService {
     }
 
     fun onDestroy(context: Context) {
-        if (torqueService != null) {
-            context.unbindService(torqueConnection)
+        // Снимаем привязку по флагу, а не по наличию соединения: если bindService() уже
+        // вызван, но onServiceConnected ещё не пришёл, прежняя проверка оставляла
+        // BIND_AUTO_CREATE висеть, и служба не останавливалась вместе с приложением.
+        if (hasBound) {
+            runCatching { context.unbindService(torqueConnection) }
             hasBound = false
-            torqueService = null
         }
+        torqueService = null
     }
 
     fun requestQuit(context: Context) {
