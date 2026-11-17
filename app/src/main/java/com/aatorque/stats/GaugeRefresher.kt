@@ -11,7 +11,7 @@ import java.util.concurrent.ScheduledThreadPoolExecutor
 import java.util.concurrent.TimeUnit
 
 enum class ConnectStatus {
-    CONNECTING_TORQUE, CONNECTING_ECU, CONNECTED, SETUP_GAUGE
+    CONNECTING_SERVICE, CONNECTING_ECU, CONNECTED, SETUP_GAUGE
 }
 
 /**
@@ -19,27 +19,27 @@ enum class ConnectStatus {
  * ELM327 не успевает за семью отдельными опросами по 300 мс, из-за чего росла очередь
  * и значения отставали от реальных.
  */
-class TorqueRefresher {
+class GaugeRefresher {
     /** Ключ — позиция элемента на экране; меняется из главного потока, читается из таймера. */
-    val data = ConcurrentHashMap<Int, TorqueData>()
+    val data = ConcurrentHashMap<Int, GaugeData>()
     private val executor = ScheduledThreadPoolExecutor(1).apply { removeOnCancelPolicy = true }
     val handler = Handler(Looper.getMainLooper())
-    private val conWatcher = MutableStateFlow(ConnectStatus.CONNECTING_TORQUE)
+    private val conWatcher = MutableStateFlow(ConnectStatus.CONNECTING_SERVICE)
     val connectStatus = conWatcher.asSharedFlow()
-    val cache = HashMap<Int, HashMap<Int, TorqueData>>()
+    val cache = HashMap<Int, HashMap<Int, GaugeData>>()
     private var batchTimer: ScheduledFuture<*>? = null
 
     companion object {
         const val REFRESH_INTERVAL = 300L
     }
 
-    fun populateQuery(pos: Int, screen: Int, query: Display): TorqueData {
+    fun populateQuery(pos: Int, screen: Int, query: Display): GaugeData {
         data[pos]?.stopRefreshing(true)
         val cacheItem = cache[screen]?.get(pos)
         val torqueData = if (cacheItem?.display?.equals(query) == true) {
             cacheItem
         } else {
-            TorqueData(query)
+            GaugeData(query)
         }
         cache.getOrPut(screen) {
             HashMap()
@@ -49,7 +49,7 @@ class TorqueRefresher {
         return torqueData
     }
 
-    suspend fun makeExecutors(service: TorqueService) {
+    suspend fun makeExecutors(service: ObdServiceClient) {
         val foundValid = data.values.any { it.pid != null }
         if (foundValid && batchTimer == null) {
             Timber.i("Scheduled batch refresh for ${data.size} items")
@@ -63,14 +63,14 @@ class TorqueRefresher {
         }
         if (!foundValid) conWatcher.value = ConnectStatus.SETUP_GAUGE
         service.addConnectCallback {
-            if (conWatcher.value == ConnectStatus.CONNECTING_TORQUE) {
+            if (conWatcher.value == ConnectStatus.CONNECTING_SERVICE) {
                 conWatcher.value = ConnectStatus.CONNECTING_ECU
             }
         }
     }
 
     /** Один запрос на все датчики экрана; ответ раскладывается по элементам в том же порядке. */
-    private fun doRefreshBatch(service: TorqueService) {
+    private fun doRefreshBatch(service: ObdServiceClient) {
         val items = data.entries
             .mapNotNull { (pos, torqueData) -> torqueData.pid?.let { pos to it } }
             .sortedBy { it.first }
@@ -79,7 +79,7 @@ class TorqueRefresher {
             val values = try {
                 ts.getPIDValuesAsDouble(items.map { it.second }.toTypedArray())
             } catch (e: Exception) {
-                Timber.e("Torque returned invalid data for ${items.map { it.second }}", e)
+                Timber.e("OBD service returned invalid data for ${items.map { it.second }}", e)
                 return@runIfConnected
             }
             var anyValue = false
@@ -87,7 +87,7 @@ class TorqueRefresher {
                 val torqueData = data[pos] ?: return@forEachIndexed
                 val value = values.getOrNull(index) ?: return@forEachIndexed
                 torqueData.lastData = value
-                Timber.d("Got valid $value from torque for ${torqueData.display.label}")
+                Timber.d("Got valid $value from OBD for ${torqueData.display.label}")
                 if (value != 0.0 || torqueData.hasReceivedNonZero) {
                     torqueData.hasReceivedNonZero = true
                     anyValue = true
@@ -101,7 +101,7 @@ class TorqueRefresher {
     }
 
     fun stopExecutors() {
-        Timber.i("Telling Torque refreshers to stop")
+        Timber.i("Telling gauge refreshers to stop")
         batchTimer?.cancel(true)
         batchTimer = null
         for (td in data.values) {
@@ -120,7 +120,7 @@ class TorqueRefresher {
         return data[idx]?.display?.equals(otherScreen) != true
     }
 
-    fun updateIfNeeded(pos: Int, screen: Int, query: Display): TorqueData {
+    fun updateIfNeeded(pos: Int, screen: Int, query: Display): GaugeData {
         return if (hasChanged(pos, query)) {
             populateQuery(pos, screen, query)
         } else {

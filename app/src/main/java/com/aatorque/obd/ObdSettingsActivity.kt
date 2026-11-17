@@ -303,6 +303,13 @@ class ObdPrefsFragment : PreferenceFragmentCompat() {
         val app = category(getString(R.string.obd_cat_app))
         action(
             app,
+            getString(R.string.obd_check_title),
+            getString(R.string.obd_check_action_summary)
+        ) {
+            startActivity(Intent(ctx, ObdCheckActivity::class.java))
+        }
+        action(
+            app,
             getString(R.string.obd_action_experimental),
             getString(R.string.obd_action_experimental_summary)
         ) {
@@ -403,7 +410,16 @@ class ObdPrefsFragment : PreferenceFragmentCompat() {
     private val tick = object : Runnable {
         override fun run() {
             val ctx = context
-            if (ctx != null) statusPref?.summary = ObdBridgeService.statusText(ctx)
+            if (ctx != null) {
+                statusPref?.summary = ObdBridgeService.statusText(ctx)
+                // Служба подключилась впервые — показываем проверку датчиков: пустой список до
+                // подключения пользователю ничего не сообщает.
+                val obdPrefs = ctx.getSharedPreferences("obd_bridge", Context.MODE_PRIVATE)
+                if (obdPrefs.getBoolean("sensor_check_pending", false)) {
+                    obdPrefs.edit().putBoolean("sensor_check_pending", false).apply()
+                    startActivity(Intent(ctx, ObdCheckActivity::class.java))
+                }
+            }
             if (!busy) {
                 busy = true
                 io.execute {

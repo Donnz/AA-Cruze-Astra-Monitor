@@ -38,6 +38,16 @@ class ObdEngine(
         private set
     private var okStreak = 0
 
+    /** Когда блок в последний раз ответил на запрос датчика (0 — ещё ни разу). */
+    @Volatile private var lastAnswerAt = 0L
+
+    /**
+     * Зажигание включено: блок отвечает на запросы. Стоит зажигание или нет, по CAN не отличить,
+     * поэтому признак — свежий ответ блока; двигатель при этом может и не работать.
+     */
+    fun ignitionOn(now: Long = System.currentTimeMillis()): Boolean =
+        lastAnswerAt > 0 && now - lastAnswerAt < IGNITION_HOLD_MS
+
     /** Обмен прошёл: счётчик сбоев сбрасывается только после трёх успехов подряд, иначе «мигающая» связь никогда не приведёт к переподключению. */
     private fun onOk() {
         if (failures > 0 && ++okStreak >= 3) { failures = 0; okStreak = 0 }
@@ -73,6 +83,7 @@ class ObdEngine(
                 readSupported(r)
         Timber.i("Режим 01, заявлено блоком: %s", supported.sorted().joinToString(", ") { "%02X".format(it) })
         failures = 0; okStreak = 0
+        lastAnswerAt = System.currentTimeMillis()   // блок ответил на 0100 — зажигание включено
         readId("33")                                       // барометр нужен для расчёта наддува
         bg = Thread(::backgroundLoop, "obd-regen").also { it.isDaemon = true; it.start() }
     }
@@ -156,6 +167,7 @@ class ObdEngine(
         }
         if (failed) onFail() else onOk()
         val t = System.currentTimeMillis()
+        if (v != null && p.virtual == null) lastAnswerAt = t   // блок ответил: зажигание включено
         var shown: Double? = v
         if (v != null) {
             if (p.slow) lastGood[p.id] = Sample(t, v)
@@ -218,4 +230,9 @@ class ObdEngine(
 
     /** Байты ответа после префикса (например «410C» или «620434»); null, если ответа нет. */
     private fun parse(text: String?, prefix: String): IntArray? = ElmParse.bytes(text, prefix)
+
+    private companion object {
+        /** Сколько терпим молчание блока, прежде чем считать зажигание выключенным (мс). */
+        const val IGNITION_HOLD_MS = 15_000L
+    }
 }

@@ -289,6 +289,11 @@ class ObdBridgeService : Service() {
                 engine = e
                 failures = 0
                 post(getString(R.string.obd_status_connected))
+                // Связь есть — теперь «Проверка датчиков» имеет смысл: экран откроется один раз,
+                // когда пользователь будет на экране подключения.
+                if (!prefs.getBoolean("sensor_check_shown", false)) {
+                    prefs.edit().putBoolean("sensor_check_pending", true).apply()
+                }
                 while (running && e.failures < 5 && !reconnectFlag) Thread.sleep(1000)
                 post(if (reconnectFlag) getString(R.string.obd_status_reconnecting) else getString(R.string.obd_status_lost))
                 reconnectFlag = false
@@ -351,6 +356,9 @@ class ObdBridgeService : Service() {
 
         /** Текущее значение параметра для экрана проверки. Вызывать только не из главного потока. */
         fun peek(id: String): Double? = current?.value(id)
+
+        /** Зажигание: true — блок отвечает, false — молчит, null — связи с адаптером нет. */
+        fun ignitionOn(): Boolean? = current?.ignitionOn()
 
         /** Переподключиться (например, после смены адаптера). */
         fun reconnect(context: Context) {

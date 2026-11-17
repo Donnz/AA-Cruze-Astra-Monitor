@@ -12,7 +12,7 @@ import com.ezylang.evalex.data.EvaluationValue
 import timber.log.Timber
 import java.util.concurrent.ScheduledFuture
 
-class TorqueData(var display: Display) {
+class GaugeData(var display: Display) {
     companion object {
         const val PREFIX = "torque_"
         val drawableRegex = Regex("res/drawable/(?<name>.+)\\.[a-z]+")
@@ -42,7 +42,7 @@ class TorqueData(var display: Display) {
     var hasReceivedNonZero = false
     var currentAlarm = MutableLiveData<Coloring?>()
 
-    var notifyUpdate: ((TorqueData) -> Unit)? = null
+    var notifyUpdate: ((GaugeData) -> Unit)? = null
         set(value) {
             field = value
             value?.let { it(this) }

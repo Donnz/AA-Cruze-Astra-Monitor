@@ -13,30 +13,30 @@ import timber.log.Timber
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
 
-class TorqueService {
-    var torqueService: ITorqueService? = null
+class ObdServiceClient {
+    var obdService: ITorqueService? = null
     val onConnect = ArrayList<(ITorqueService) -> Unit>()
     val conLock = ReentrantLock()
     var hasBound = false
 
-    fun addConnectCallback(func: (ITorqueService) -> Unit): TorqueService {
-        if (torqueService == null) {
+    fun addConnectCallback(func: (ITorqueService) -> Unit): ObdServiceClient {
+        if (obdService == null) {
             conLock.withLock {
                 onConnect.add(func)
             }
         } else {
-            func(torqueService!!)
+            func(obdService!!)
         }
         return this
     }
 
     fun runIfConnected(func: (ITorqueService) -> Unit) {
-        if (torqueService != null) {
-            func(torqueService!!)
+        if (obdService != null) {
+            func(obdService!!)
         }
     }
 
-    private val torqueConnection = object : ServiceConnection {
+    private val serviceConnection = object : ServiceConnection {
         var forceReconnect: (()-> Unit)? = null
 
         /** Что делать, когда служба OBD подключилась. */
@@ -46,7 +46,7 @@ class TorqueService {
                 if (BuildConfig.SIMULATE_METRICS) {
                     svc.setDebugTestMode(!svc.isConnectedToECU)
                 }
-                torqueService = svc
+                obdService = svc
                 conLock.withLock {
                     for (funt in onConnect) {
                         funt(svc)
@@ -55,14 +55,14 @@ class TorqueService {
                 }
             } catch (e: DeadObjectException) {
                 Timber.e("Disconnected from service", e)
-                torqueService = null
+                obdService = null
                 forceReconnect?.invoke()
             }
         }
 
         /** Что делать при отключении службы OBD. */
         override fun onServiceDisconnected(name: ComponentName) {
-            torqueService = null
+            obdService = null
         }
     }
 
@@ -71,19 +71,19 @@ class TorqueService {
         // вызван, но onServiceConnected ещё не пришёл, прежняя проверка оставляла
         // BIND_AUTO_CREATE висеть, и служба не останавливалась вместе с приложением.
         if (hasBound) {
-            runCatching { context.unbindService(torqueConnection) }
+            runCatching { context.unbindService(serviceConnection) }
             hasBound = false
         }
-        torqueService = null
+        obdService = null
     }
 
-    fun startTorque(context: Context): Boolean {
+    fun connect(context: Context): Boolean {
         val intent = Intent(context, ObdBridgeService::class.java)
         ObdBridgeService.start(context)
-        hasBound = context.bindService(intent, torqueConnection, Activity.BIND_AUTO_CREATE)
-        torqueConnection.forceReconnect = {
+        hasBound = context.bindService(intent, serviceConnection, Activity.BIND_AUTO_CREATE)
+        serviceConnection.forceReconnect = {
             onDestroy(context)
-            context.bindService(intent, torqueConnection, Activity.BIND_AUTO_CREATE)
+            context.bindService(intent, serviceConnection, Activity.BIND_AUTO_CREATE)
         }
         Timber.i(
             if (hasBound) "Connected to OBD service!" else "Unable to connect to OBD service"

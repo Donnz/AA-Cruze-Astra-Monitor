@@ -17,7 +17,7 @@ import com.aatorque.datastore.Display
 import com.aatorque.datastore.MaxControl
 import com.aatorque.datastore.Screen
 import com.aatorque.stats.R
-import com.aatorque.stats.TorqueServiceWrapper
+import com.aatorque.stats.StatsService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -53,12 +53,12 @@ class SettingsPIDFragment:  PreferenceFragmentCompat() {
     lateinit var highVisActivePref: SwitchPreferenceCompat
     lateinit var colorPref: ColorPreference
 
-    var torqueService: TorqueServiceWrapper? = null
+    var obdService: StatsService? = null
 
-    var torqueConnection = object : ServiceConnection {
+    var serviceConnection = object : ServiceConnection {
         override fun onServiceConnected(className: ComponentName, service: IBinder) {
-            torqueService = (service as TorqueServiceWrapper.LocalBinder).getService()
-            torqueService!!.loadPidInformation(false) {
+            obdService = (service as StatsService.LocalBinder).getService()
+            obdService!!.loadPidInformation(false) {
                 pids ->
                 requireActivity().runOnUiThread {
                     val valuesQuery = pids.map { "torque_${it.first}" }.toTypedArray()
@@ -72,7 +72,7 @@ class SettingsPIDFragment:  PreferenceFragmentCompat() {
         }
 
         override fun onServiceDisconnected(arg0: ComponentName) {
-            torqueService = null
+            obdService = null
         }
     }
 
@@ -140,7 +140,7 @@ class SettingsPIDFragment:  PreferenceFragmentCompat() {
                 enableItems(false)
             } else {
                 val pidOnly = (newValue as String).substring("torque_".length)
-                torqueService!!.pids!!.firstOrNull {
+                obdService!!.pids!!.firstOrNull {
                     it.first == pidOnly
                 }?.let {entryVal ->
                     var minVal = ceil(entryVal.second[3].toDouble()).toInt()
@@ -159,7 +159,7 @@ class SettingsPIDFragment:  PreferenceFragmentCompat() {
             return@setOnPreferenceChangeListener true
         }
 
-        mBound = TorqueServiceWrapper.runStartIntent(requireContext(), torqueConnection)
+        mBound = StatsService.runStartIntent(requireContext(), serviceConnection)
         showLabelPref.setOnPreferenceChangeListener { _, newValue ->
             if (!isClock) {
                 labelPref.isEnabled = (newValue as Boolean)
@@ -301,7 +301,7 @@ class SettingsPIDFragment:  PreferenceFragmentCompat() {
         super.onDestroy()
         if (mBound) {
             try {
-                requireContext().unbindService(torqueConnection)
+                requireContext().unbindService(serviceConnection)
             }catch(e: IllegalArgumentException) {
                 Timber.e("Failed to unbind service", e)
             }

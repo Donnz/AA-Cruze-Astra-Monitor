@@ -15,11 +15,11 @@ import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
 
 typealias PidInfo = List<Pair<String, List<String>>>
-class TorqueServiceWrapper: Service() {
+class StatsService: Service() {
     private val binder = LocalBinder()
     private var bound = false
     var wasStartAttempted = false
-    var torqueService: ITorqueService? = null
+    var obdService: ITorqueService? = null
     val onConnect = ArrayList<(ITorqueService) -> Unit>()
     var pids: PidInfo? = null
     var connectCount = 0
@@ -28,7 +28,7 @@ class TorqueServiceWrapper: Service() {
     override fun onCreate() {
         super.onCreate()
         if (!wasStartAttempted) {
-            wasStartAttempted = startTorque()
+            wasStartAttempted = connect()
         }
         connectCount++
     }
@@ -37,9 +37,9 @@ class TorqueServiceWrapper: Service() {
         super.onDestroy()
         connectCount--
         // unbindService бросает IllegalArgumentException, если привязки не было
-        // (startTorque вернул false), поэтому проверяем флаг и глушим исключение.
+        // (connect вернул false), поэтому проверяем флаг и глушим исключение.
         if (connectCount == 0 && bound) {
-            runCatching { unbindService(torqueConnection) }
+            runCatching { unbindService(serviceConnection) }
             bound = false
         }
     }
@@ -81,20 +81,20 @@ class TorqueServiceWrapper: Service() {
      */
     inner class LocalBinder : Binder() {
         // Return this instance of LocalService so clients can call public methods.
-        fun getService(): TorqueServiceWrapper = this@TorqueServiceWrapper
+        fun getService(): StatsService = this@StatsService
     }
 
     fun isAvailable(): Boolean {
-        return torqueService != null
+        return obdService != null
     }
 
-    fun addConnectCallback(func: (ITorqueService) -> Unit): TorqueServiceWrapper {
-        if (torqueService == null) {
+    fun addConnectCallback(func: (ITorqueService) -> Unit): StatsService {
+        if (obdService == null) {
             conLock.withLock {
                 onConnect.add(func)
             }
         } else {
-            func(torqueService!!)
+            func(obdService!!)
         }
         return this
     }
@@ -104,7 +104,7 @@ class TorqueServiceWrapper: Service() {
     }
 
 
-    private val torqueConnection: ServiceConnection = object : ServiceConnection {
+    private val serviceConnection: ServiceConnection = object : ServiceConnection {
         /** Что делать, когда служба OBD подключилась. */
         override fun onServiceConnected(arg0: ComponentName, service: IBinder) {
             val svc = ITorqueService.Stub.asInterface(service)
@@ -114,29 +114,29 @@ class TorqueServiceWrapper: Service() {
                 }
                 onConnect.clear()
             }
-            torqueService = svc
+            obdService = svc
         }
 
         /** Что делать при отключении службы OBD. */
         override fun onServiceDisconnected(name: ComponentName) {
-            torqueService = null
+            obdService = null
         }
     }
 
-    fun startTorque(): Boolean {
+    fun connect(): Boolean {
         val intent = Intent(this, ObdBridgeService::class.java)
         ObdBridgeService.start(this)
-        val torqueBind = bindService(intent, torqueConnection, Activity.BIND_AUTO_CREATE)
-        bound = torqueBind
+        val boundService = bindService(intent, serviceConnection, Activity.BIND_AUTO_CREATE)
+        bound = boundService
         Timber.i(
-            if (torqueBind) "Connected to OBD service!" else "Unable to connect to OBD service"
+            if (boundService) "Connected to OBD service!" else "Unable to connect to OBD service"
         )
-        return torqueBind
+        return boundService
     }
 
     companion object {
         fun runStartIntent(context: Context, conn: ServiceConnection): Boolean {
-            Intent(context, TorqueServiceWrapper::class.java).also { intent ->
+            Intent(context, StatsService::class.java).also { intent ->
                 return context.bindService(intent, conn, Context.BIND_AUTO_CREATE)
             }
         }
